@@ -17,6 +17,13 @@ app = Flask(__name__)
 
 model = None
 vectorizer = None
+# Load the model and vectorizer when the server starts
+try:
+    model = tf.keras.models.load_model('./keras_model_s.h5')
+    vectorizer = joblib.load('./tfidf_vectorizer_s.pkl')
+except Exception as e:
+    print(f"Error loading model or vectorizer: {e}")
+
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
@@ -34,30 +41,27 @@ def index():
 @app.route("/predict", methods=["POST", "GET"])
 def predict():
     data = request.get_json()
-    print(data)
+    try:
+        preprocessed_text = preprocess_text(data['data'])  # Extract preprocessed text from the list
+        preprocessed_text = vectorizer.transform(np.array([preprocessed_text])).toarray() 
+        prediction = model.predict(preprocessed_text)
+        
+        prediction = (prediction > 0.5).astype(int)
+        
+        sentiment = np.argmax(prediction, axis=1)[0]
     
-    preprocessed_text = preprocess_text(data['data'])  # Extract preprocessed text from the list
-    preprocessed_text = vectorizer.transform(np.array([preprocessed_text])).toarray() 
-    prediction = model.predict(preprocessed_text)
-    
-    prediction = (prediction > 0.5).astype(int)
-    
-    sentiment = np.argmax(prediction, axis=1)[0]
-
-    # Map the sentiment to categories
-    sentiment_mapping = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
-    result = sentiment_mapping[sentiment]
-    
-    response = {
-        'prediction': result
-    }
-    
-    return jsonify(response)
-    
+        # Map the sentiment to categories
+        sentiment_mapping = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        result = sentiment_mapping[sentiment]
+        
+        response = {
+            'prediction': result
+        }
+        
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
-    model = tf.keras.models.load_model('./keras_model_s.h5')
-    vectorizer = joblib.load('./tfidf_vectorizer_s.pkl')
     print("app is running")
-    
     app.run(debug=True)
