@@ -1,10 +1,15 @@
 from flask import Flask , request , jsonify , render_template
 import tensorflow as tf
 import numpy as np
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
 import re
 import joblib
+
+import nltk
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
 
 
 
